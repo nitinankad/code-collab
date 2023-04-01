@@ -1,8 +1,11 @@
 import http from "http";
 import express, { Express, Request, Response, NextFunction } from "express";
 import morgan from "morgan";
+import CompilerConfig from "./config/compilerConfig";
+import CodeExecutor from "./compiler/codeExecutor";
 
 const router: Express = express();
+const codeExecutor: CodeExecutor = new CodeExecutor();
 
 router.use(morgan("dev"));
 router.use(express.urlencoded({ extended: false }));
@@ -25,6 +28,20 @@ router.use("/ping", async (req: Request, res: Response, next: NextFunction) => {
     message: "ping"
   });
 });
+
+router.post("/compile", CompilerConfig.validateLanguage, async (req: Request, res: Response, next: NextFunction) => {
+    const language = req.body.language;
+    const source = req.body.source;
+
+    // This should be using a queue so it can process many code exec requests at once
+    const { output, error } = await codeExecutor.execute(language, source);
+
+    return res.status(200).json({
+      output: output,
+      error: error,
+    });
+  }
+);
 
 router.use((req, res, next) => {
   const error = new Error("Not found");
